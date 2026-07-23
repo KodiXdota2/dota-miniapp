@@ -3,442 +3,516 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dota 2 Drafter</title>
+  <title>DotaMETA</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * {
       box-sizing: border-box;
       user-select: none;
+      margin: 0;
+      padding: 0;
     }
     body {
-      background: #0f1115;
-      color: #e1e6eb;
+      background: #0d0a1a;
+      background: radial-gradient(circle at top, #1e1338 0%, #0d0a1a 100%);
+      color: #ffffff;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      margin: 0;
       padding: 12px;
+      padding-bottom: 80px;
+      min-height: 100vh;
     }
 
-    /* Верхний блок выбранных героев */
-    .draft-header {
-      background: #161920;
-      border: 1px solid #282c37;
-      border-radius: 8px;
-      padding: 10px;
+    /* Поиск */
+    .search-container {
+      position: relative;
+      margin-bottom: 15px;
+    }
+    .search-input {
+      width: 100%;
+      padding: 12px 16px 12px 40px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      backdrop-filter: blur(10px);
+    }
+    .search-input::placeholder {
+      color: #8b85a1;
+    }
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #8b85a1;
+      font-size: 14px;
+    }
+
+    /* Заголовки */
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
       margin-bottom: 12px;
       display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .team-row {
-      display: flex;
       align-items: center;
       gap: 8px;
-    }
-    .team-title {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      width: 75px;
-    }
-    .team-title.enemy { color: #ff5252; }
-    .team-title.ally { color: #4caf50; }
-    
-    .slots-container {
-      display: flex;
-      gap: 6px;
-      flex: 1;
-    }
-    .slot {
-      width: 36px;
-      height: 24px;
-      background: #202430;
-      border: 1px dashed #3a4050;
-      border-radius: 4px;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .slot img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
     }
 
-    /* Переключатель режимов */
+    /* Вкладка: Список Героев */
+    .heroes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .hero-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 10px 14px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: all 0.2s ease;
+    }
+    .hero-item:active {
+      transform: scale(0.98);
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .hero-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .hero-avatar {
+      width: 52px;
+      height: 32px;
+      border-radius: 8px;
+      object-fit: cover;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+    .hero-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .hero-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .hero-role {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .role-carry { color: #ffab00; }
+    .role-support { color: #00e676; }
+    .role-mid { color: #ff5252; }
+    .role-offlane { color: #29b6f6; }
+
+    .winrate-badge {
+      background: rgba(0, 230, 118, 0.12);
+      color: #00e676;
+      border: 1px solid rgba(0, 230, 118, 0.3);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* Вкладка: Драфт Помощник */
+    .draft-view {
+      display: none;
+    }
     .mode-switch {
       display: flex;
-      background: #161920;
-      padding: 3px;
-      border-radius: 8px;
-      border: 1px solid #282c37;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px;
+      border-radius: 12px;
       margin-bottom: 12px;
     }
     .mode-btn {
       flex: 1;
-      padding: 8px;
+      padding: 10px;
       border: none;
       background: transparent;
-      color: #7a8294;
-      font-weight: 600;
+      color: #8b85a1;
+      font-weight: 700;
       font-size: 12px;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
-      transition: all 0.2s ease;
     }
     .mode-btn.active-enemy {
-      background: #2a1215;
+      background: rgba(255, 82, 82, 0.2);
       color: #ff5252;
-      border: 1px solid #ff525244;
+      border: 1px solid #ff5252;
     }
     .mode-btn.active-ally {
-      background: #122817;
-      color: #4caf50;
-      border: 1px solid #4caf5044;
+      background: rgba(0, 230, 118, 0.2);
+      color: #00e676;
+      border: 1px solid #00e676;
     }
-
-    /* Сетка героев */
-    .hero-grid {
+    .grid-select {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 8px;
-      max-height: 220px;
-      overflow-y: auto;
-      padding-right: 4px;
     }
-    .hero-grid::-webkit-scrollbar {
-      width: 4px;
-    }
-    .hero-grid::-webkit-scrollbar-thumb {
-      background: #282c37;
-      border-radius: 4px;
-    }
-
-    .hero-card {
-      position: relative;
-      background: #161920;
-      border: 2px solid #282c37;
-      border-radius: 6px;
+    .grid-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid transparent;
+      border-radius: 8px;
       overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.1s, border-color 0.2s;
       aspect-ratio: 16/9;
+      cursor: pointer;
+      position: relative;
     }
-    .hero-card:active {
-      transform: scale(0.96);
-    }
-    .hero-card img {
+    .grid-card img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      display: block;
     }
-    .hero-card .hero-name {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      font-size: 9px;
-      font-weight: 600;
-      padding: 2px 4px;
-      background: rgba(0, 0, 0, 0.75);
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .hero-card.selected-enemy {
-      border-color: #ff5252;
-      box-shadow: 0 0 8px rgba(255, 82, 82, 0.4);
-    }
-    .hero-card.selected-ally {
-      border-color: #4caf50;
-      box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
-    }
+    .grid-card.sel-enemy { border-color: #ff5252; }
+    .grid-card.sel-ally { border-color: #00e676; }
 
-    /* Кнопка расчета */
-    .btn-calc {
-      width: 100%;
-      padding: 12px;
-      background: linear-gradient(135deg, #e5a93c, #c88318);
-      border: none;
-      color: #0f1115;
-      font-weight: 700;
-      border-radius: 8px;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-top: 12px;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(200, 131, 24, 0.25);
-    }
-
-    /* Блок результатов */
-    .results-box {
-      margin-top: 14px;
-      background: #161920;
-      border: 1px solid #282c37;
-      border-radius: 8px;
-      padding: 10px;
+    /* Поп-ап Деталей Героя */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(5, 3, 12, 0.85);
+      backdrop-filter: blur(12px);
       display: none;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 100;
     }
-    .results-title {
-      color: #e5a93c;
-      font-weight: 700;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 10px;
-      text-align: center;
+    .modal-content {
+      width: 100%;
+      max-height: 85vh;
+      background: #17122b;
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      overflow-y: auto;
+      animation: slideUp 0.25s cubic-bezier(0, 0, 0.2, 1);
     }
-    .result-item {
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #202430;
-      padding: 6px 10px;
-      border-radius: 6px;
-      margin-bottom: 6px;
+      margin-bottom: 16px;
     }
-    .result-item:last-child {
-      margin-bottom: 0;
-    }
-    .hero-info {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .hero-info img {
+    .close-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #fff;
       width: 32px;
-      height: 20px;
-      border-radius: 3px;
-      object-fit: cover;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
     }
-    .hero-info span {
+    .info-block {
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .info-title {
       font-size: 12px;
-      font-weight: 600;
-    }
-    .badge {
-      font-size: 11px;
+      color: #8b85a1;
+      text-transform: uppercase;
       font-weight: 700;
-      padding: 2px 6px;
+      margin-bottom: 8px;
+    }
+    .items-list {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+    }
+    .item-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(0,0,0,0.3);
+      padding: 6px;
+      border-radius: 8px;
+      min-width: 65px;
+    }
+    .item-card img {
+      width: 40px;
+      height: 30px;
       border-radius: 4px;
+      margin-bottom: 4px;
     }
-    .badge.positive {
-      background: rgba(76, 175, 80, 0.15);
-      color: #4caf50;
+    .item-time {
+      font-size: 10px;
+      color: #ffab00;
+      font-weight: 700;
     }
-    .badge.negative {
-      background: rgba(255, 82, 82, 0.15);
-      color: #ff5252;
+
+    /* Нижняя панель навигации */
+    .bottom-nav {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      background: rgba(23, 18, 43, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 6px;
+      display: flex;
+      justify-content: space-around;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      z-index: 90;
+    }
+    .nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 0;
+      background: transparent;
+      border: none;
+      color: #8b85a1;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-btn.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .nav-icon {
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
 
-  <!-- Блок выбранных слотов -->
-  <div class="draft-header">
-    <div class="team-row">
-      <span class="team-title enemy">Враги</span>
-      <div class="slots-container" id="enemy-slots">
-        <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
-      </div>
+  <!-- Поиск -->
+  <div class="search-container">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-input" id="search-input" placeholder="Поиск героя..." oninput="filterHeroes()">
+  </div>
+
+  <!-- Вкладка: Список Героев -->
+  <div id="tab-heroes">
+    <div class="section-title">👥 Все Герои</div>
+    <div class="heroes-list" id="heroes-list-container"></div>
+  </div>
+
+  <!-- Вкладка: Драфт -->
+  <div id="tab-draft" class="draft-view">
+    <div class="section-title">🪄 Помощник Драфта</div>
+    <div class="mode-switch">
+      <button class="mode-btn active-enemy" id="m-enemy" onclick="setDraftMode('enemy')">Выбрать ВРАГА</button>
+      <button class="mode-btn" id="m-ally" onclick="setDraftMode('ally')">Выбрать СОЮЗНИКА</button>
     </div>
-    <div class="team-row">
-      <span class="team-title ally">Союзники</span>
-      <div class="slots-container" id="ally-slots">
-        <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+    <div class="grid-select" id="draft-grid"></div>
+  </div>
+
+  <!-- Поп-ап окна Героя -->
+  <div class="modal-overlay" id="hero-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <img id="m-img" style="width:50px; height:32px; border-radius:6px;">
+          <div>
+            <h2 id="m-title" style="font-size:16px;">Wraith King</h2>
+            <span id="m-role" class="hero-role role-carry">CARRY</span>
+          </div>
+        </div>
+        <button class="close-btn" onclick="closeModal()">✕</button>
+      </div>
+
+      <div class="info-block">
+        <div class="info-title">📊 Винрейт мета-статистики</div>
+        <div id="m-winrate" style="font-size:20px; font-weight:800; color:#00e676;">54.7%</div>
+      </div>
+
+      <div class="info-block">
+        <div class="info-title">🛍️ Тайминги предметов (OpenDota / ProTracker)</div>
+        <div class="items-list" id="m-items"></div>
+      </div>
+
+      <div class="info-block">
+        <div class="info-title">🛡️ Топ-5 Лучших союзников</div>
+        <div id="m-allies" style="font-size:13px; line-height:1.6;"></div>
+      </div>
+
+      <div class="info-block">
+        <div class="info-title">⚔️ Топ-5 Контрпиков (Худшие враги)</div>
+        <div id="m-counters" style="font-size:13px; line-height:1.6;"></div>
       </div>
     </div>
   </div>
 
-  <!-- Переключатель -->
-  <div class="mode-switch">
-    <button class="mode-btn active-enemy" id="mode-enemy" onclick="setMode('enemy')">Выбрать ВРАГА</button>
-    <button class="mode-btn" id="mode-ally" onclick="setMode('ally')">Выбрать СОЮЗНИКА</button>
-  </div>
-
-  <!-- Сетка героев -->
-  <div class="hero-grid" id="heroes-container"></div>
-
-  <!-- Кнопка -->
-  <button class="btn-calc" onclick="calculatePicks()">Рассчитать контрпики</button>
-
-  <!-- Результаты -->
-  <div class="results-box" id="results-box">
-    <div class="results-title">⚔️ Лучшие Керри против пика</div>
-    <div id="results-list"></div>
+  <!-- Нижняя навигация -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="btn-tab-heroes" onclick="switchTab('heroes')">
+      <span class="nav-icon">👥</span>
+      ГЕРОИ
+    </button>
+    <button class="nav-btn" id="btn-tab-draft" onclick="switchTab('draft')">
+      <span class="nav-icon">🪄</span>
+      ПОМОШНИК ДРАФТА
+    </button>
   </div>
 
   <script>
     let tg = window.Telegram.WebApp;
     tg.expand();
 
-    // Список героев (код фантомки исправлен на phantom_assassin)
-    const heroesList = [
-      { name: "Axe", code: "axe", isCarry: false },
-      { name: "Invoker", code: "invoker", isCarry: false },
-      { name: "Sniper", code: "sniper", isCarry: true },
-      { name: "Pudge", code: "pudge", isCarry: false },
-      { name: "Juggernaut", code: "juggernaut", isCarry: true },
-      { name: "Phantom Assassin", code: "phantom_assassin", isCarry: true },
-      { name: "Slark", code: "slark", isCarry: true },
-      { name: "Sven", code: "sven", isCarry: true },
-      { name: "Anti-Mage", code: "antimage", isCarry: true },
-      { name: "Faceless Void", code: "faceless_void", isCarry: true },
-      { name: "Bristleback", code: "bristleback", isCarry: false },
-      { name: "Drow Ranger", code: "drow_ranger", isCarry: true }
+    // Расширенная мета-база героев
+    const heroesData = [
+      {
+        name: "Wraith King", code: "skeleton_king", role: "CARRY", roleClass: "role-carry", winrate: "54.7%",
+        items: [ {name: "Armlet", time: "11-13 мин", img: "armlet"}, {name: "Desolator", time: "18-20 мин", img: "desolator"}, {name: "BKB", time: "24-26 мин", img: "black_king_bar"} ],
+        allies: "1. Invoker | 2. Rubick | 3. Dazzle | 4. Lion | 5. Crystal Maiden",
+        counters: "1. Anti-Mage | 2. Phantom Lancer | 3. Slark | 4. Necrophos | 5. Razor"
+      },
+      {
+        name: "Spectre", code: "spectre", role: "CARRY", roleClass: "role-carry", winrate: "54.4%",
+        items: [ {name: "Blade Mail", time: "10-12 мин", img: "blade_mail"}, {name: "Radiance", time: "19-22 мин", img: "radiance"}, {name: "Aghanims", time: "27 мин", img: "ultimate_scepter"} ],
+        allies: "1. Zeus | 2. Nature's Prophet | 3. Warlock | 4. Silencer | 5. Treant",
+        counters: "1. Viper | 2. Necrophos | 3. Anti-Mage | 4. Undying | 5. Lifestealer"
+      },
+      {
+        name: "Vengeful Spirit", code: "vengefulspirit", role: "SUPPORT", roleClass: "role-support", winrate: "53.4%",
+        items: [ {name: "Tranquil", time: "6 мин", img: "tranquil_boots"}, {name: "Solar Crest", time: "14 мин", img: "solar_crest"}, {name: "Aghanims", time: "24 мин", img: "ultimate_scepter"} ],
+        allies: "1. Drow Ranger | 2. Luna | 3. Sven | 4. Slardar | 5. Weaver",
+        counters: "1. Rubick | 2. Tinker | 3. Phantom Lancer | 4. Broodmother | 5. Meepo"
+      },
+      {
+        name: "Snapfire", code: "snapfire", role: "MID LANE", roleClass: "role-mid", winrate: "53.1%",
+        items: [ {name: "Blink Dagger", time: "12 мин", img: "blink"}, {name: "Aghanims", time: "20 мин", img: "ultimate_scepter"}, {name: "Daedalus", time: "28 мин", img: "invis_sword"} ],
+        allies: "1. Faceless Void | 2. Mars | 3. Axe | 4. Tidehunter | 5. Magnus",
+        counters: "1. Chen | 2. Enigma | 3. Silencer | 4. Clockwerk | 5. Storm Spirit"
+      },
+      {
+        name: "Juggernaut", code: "juggernaut", role: "CARRY", roleClass: "role-carry", winrate: "52.8%",
+        items: [ {name: "Maelstrom", time: "11-13 мин", img: "maelstrom"}, {name: "Manta Style", time: "19-21 мин", img: "manta"}, {name: "Aghanims Shard", time: "15 мин", img: "point_booster"} ],
+        allies: "1. Crystal Maiden | 2. Shadow Shaman | 3. Lion | 4. Grimstroke | 5. Lich",
+        counters: "1. Axe | 2. Slardar | 3. Ursa | 4. Bane | 5. Windranger"
+      },
+      {
+        name: "Phantom Assassin", code: "phantom_assassin", role: "CARRY", roleClass: "role-carry", winrate: "51.9%",
+        items: [ {name: "BFury", time: "13-15 мин", img: "bfury"}, {name: "Desolator", time: "20-22 мин", img: "desolator"}, {name: "BKB", time: "25 мин", img: "black_king_bar"} ],
+        allies: "1. Magnus | 2. Ogre Magi | 3. Snapfire | 4. Chen | 5. Treant Protector",
+        counters: "1. Axe | 2. Razor | 3. Tinkers | 4. Morphling | 5. Bristleback"
+      }
     ];
 
-    const countersData = {
-      "Juggernaut": { "Axe": 48.5, "Invoker": 54.2, "Pudge": 53.0, "Sniper": 51.5 },
-      "Phantom Assassin": { "Axe": 45.0, "Invoker": 55.1, "Pudge": 52.4, "Sniper": 58.2 },
-      "Slark": { "Axe": 46.2, "Invoker": 53.8, "Pudge": 56.1, "Sniper": 54.0 },
-      "Sven": { "Axe": 51.0, "Invoker": 52.0, "Pudge": 54.5, "Sniper": 49.0 },
-      "Anti-Mage": { "Axe": 44.0, "Invoker": 61.5, "Pudge": 51.0, "Sniper": 53.2 },
-      "Faceless Void": { "Axe": 49.0, "Invoker": 52.5, "Pudge": 50.5, "Sniper": 55.0 },
-      "Drow Ranger": { "Axe": 43.5, "Invoker": 50.1, "Pudge": 48.0, "Sniper": 47.0 },
-      "Sniper": { "Axe": 52.0, "Invoker": 49.0, "Pudge": 47.5, "Sniper": 50.0 }
-    };
+    let draftEnemies = [];
+    let draftAllies = [];
+    let draftMode = 'enemy';
 
-    let selectedEnemies = [];
-    let selectedAllies = [];
-    let currentMode = 'enemy';
-
-    function setMode(mode) {
-      currentMode = mode;
-      document.getElementById('mode-enemy').className = mode === 'enemy' ? 'mode-btn active-enemy' : 'mode-btn';
-      document.getElementById('mode-ally').className = mode === 'ally' ? 'mode-btn active-ally' : 'mode-btn';
-    }
-
-    function updateSlots() {
-      const enemySlots = document.querySelectorAll('#enemy-slots .slot');
-      enemySlots.forEach((slot, i) => {
-        if (selectedEnemies[i]) {
-          const hero = heroesList.find(h => h.name === selectedEnemies[i]);
-          slot.innerHTML = `<img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${hero.code}.png">`;
-        } else {
-          slot.innerHTML = '';
-        }
-      });
-
-      const allySlots = document.querySelectorAll('#ally-slots .slot');
-      allySlots.forEach((slot, i) => {
-        if (selectedAllies[i]) {
-          const hero = heroesList.find(h => h.name === selectedAllies[i]);
-          slot.innerHTML = `<img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${hero.code}.png">`;
-        } else {
-          slot.innerHTML = '';
-        }
-      });
-    }
-
-    function renderHeroes() {
-      const container = document.getElementById('heroes-container');
+    function renderHeroesList(list = heroesData) {
+      const container = document.getElementById('heroes-list-container');
       container.innerHTML = '';
 
-      heroesList.forEach(hero => {
-        const card = document.createElement('div');
-        card.className = 'hero-card';
-
-        if (selectedEnemies.includes(hero.name)) card.classList.add('selected-enemy');
-        if (selectedAllies.includes(hero.name)) card.classList.add('selected-ally');
-
-        const imgUrl = `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${hero.code}.png`;
-
-        card.innerHTML = `
-          <img src="${imgUrl}" alt="${hero.name}">
-          <div class="hero-name">${hero.name}</div>
+      list.forEach(h => {
+        const item = document.createElement('div');
+        item.className = 'hero-item';
+        item.innerHTML = `
+          <div class="hero-left">
+            <img class="hero-avatar" src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${h.code}.png">
+            <div class="hero-meta">
+              <span class="hero-title">${h.name}</span>
+              <span class="hero-role ${h.roleClass}">➶ ${h.role}</span>
+            </div>
+          </div>
+          <div class="winrate-badge">${h.winrate}</div>
         `;
+        item.onclick = () => openModal(h);
+        container.appendChild(item);
+      });
+    }
 
-        card.onclick = () => toggleHero(hero.name);
+    function openModal(hero) {
+      document.getElementById('m-title').innerText = hero.name;
+      document.getElementById('m-role').innerText = hero.role;
+      document.getElementById('m-role').className = `hero-role ${hero.roleClass}`;
+      document.getElementById('m-winrate').innerText = hero.winrate;
+      document.getElementById('m-img').src = `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${hero.code}.png`;
+      document.getElementById('m-allies').innerText = hero.allies;
+      document.getElementById('m-counters').innerText = hero.counters;
+
+      const itemsContainer = document.getElementById('m-items');
+      itemsContainer.innerHTML = '';
+      hero.items.forEach(it => {
+        itemsContainer.innerHTML += `
+          <div class="item-card">
+            <img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/${it.img}.png">
+            <span style="font-size:9px; font-weight:bold; color:#fff;">${it.name}</span>
+            <span class="item-time">⏱️ ${it.time}</span>
+          </div>
+        `;
+      });
+
+      document.getElementById('hero-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('hero-modal').style.display = 'none';
+    }
+
+    function filterHeroes() {
+      const q = document.getElementById('search-input').value.toLowerCase();
+      const filtered = heroesData.filter(h => h.name.toLowerCase().includes(q));
+      renderHeroesList(filtered);
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tab-heroes').style.display = tab === 'heroes' ? 'block' : 'none';
+      document.getElementById('tab-draft').style.display = tab === 'draft' ? 'block' : 'none';
+      document.getElementById('btn-tab-heroes').className = tab === 'heroes' ? 'nav-btn active' : 'nav-btn';
+      document.getElementById('btn-tab-draft').className = tab === 'draft' ? 'nav-btn active' : 'nav-btn';
+
+      if (tab === 'draft') renderDraftGrid();
+    }
+
+    function setDraftMode(m) {
+      draftMode = m;
+      document.getElementById('m-enemy').className = m === 'enemy' ? 'mode-btn active-enemy' : 'mode-btn';
+      document.getElementById('m-ally').className = m === 'ally' ? 'mode-btn active-ally' : 'mode-btn';
+    }
+
+    function renderDraftGrid() {
+      const container = document.getElementById('draft-grid');
+      container.innerHTML = '';
+      heroesData.forEach(h => {
+        const card = document.createElement('div');
+        card.className = 'grid-card';
+        if (draftEnemies.includes(h.name)) card.classList.add('sel-enemy');
+        if (draftAllies.includes(h.name)) card.classList.add('sel-ally');
+
+        card.innerHTML = `<img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${h.code}.png">`;
+        card.onclick = () => {
+          if (draftMode === 'enemy') {
+            draftEnemies.includes(h.name) ? draftEnemies = draftEnemies.filter(x => x !== h.name) : draftEnemies.push(h.name);
+          } else {
+            draftAllies.includes(h.name) ? draftAllies = draftAllies.filter(x => x !== h.name) : draftAllies.push(h.name);
+          }
+          renderDraftGrid();
+        };
         container.appendChild(card);
       });
-
-      updateSlots();
     }
 
-    function toggleHero(heroName) {
-      if (currentMode === 'enemy') {
-        if (selectedEnemies.includes(heroName)) {
-          selectedEnemies = selectedEnemies.filter(h => h !== heroName);
-        } else if (selectedEnemies.length < 5) {
-          selectedEnemies.push(heroName);
-          selectedAllies = selectedAllies.filter(h => h !== heroName);
-        }
-      } else {
-        if (selectedAllies.includes(heroName)) {
-          selectedAllies = selectedAllies.filter(h => h !== heroName);
-        } else if (selectedAllies.length < 4) {
-          selectedAllies.push(heroName);
-          selectedEnemies = selectedEnemies.filter(h => h !== heroName);
-        }
-      }
-
-      renderHeroes();
-    }
-
-    function calculatePicks() {
-      if (selectedEnemies.length === 0) {
-        alert('Выберите хотя бы одного вражеского героя!');
-        return;
-      }
-
-      let scores = [];
-
-      heroesList.filter(h => h.isCarry).forEach(carry => {
-        if (selectedEnemies.includes(carry.name) || selectedAllies.includes(carry.name)) return;
-
-        let totalWinrate = 0;
-        let count = 0;
-
-        selectedEnemies.forEach(enemy => {
-          if (countersData[carry.name] && countersData[carry.name][enemy]) {
-            totalWinrate += countersData[carry.name][enemy];
-            count++;
-          } else {
-            totalWinrate += 50.0;
-            count++;
-          }
-        });
-
-        let avgWinrate = count > 0 ? (totalWinrate / count) : 50.0;
-        let advantage = avgWinrate - 50.0;
-
-        scores.push({
-          hero: carry,
-          advantage: advantage
-        });
-      });
-
-      scores.sort((a, b) => b.advantage - a.advantage);
-
-      const resultsBox = document.getElementById('results-box');
-      const resultsList = document.getElementById('results-list');
-      resultsList.innerHTML = '';
-
-      scores.slice(0, 5).forEach((item, index) => {
-        const sign = item.advantage >= 0 ? '+' : '';
-        const badgeClass = item.advantage >= 0 ? 'positive' : 'negative';
-        const imgUrl = `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${item.hero.code}.png`;
-
-        const row = document.createElement('div');
-        row.className = 'result-item';
-        row.innerHTML = `
-          <div class="hero-info">
-            <img src="${imgUrl}">
-            <span>${index + 1}. ${item.hero.name}</span>
-          </div>
-          <span class="badge ${badgeClass}">${sign}${item.advantage.toFixed(1)}%</span>
-        `;
-        resultsList.appendChild(row);
-      });
-
-      resultsBox.style.display = 'block';
-    }
-
-    renderHeroes();
+    renderHeroesList();
   </script>
 </body>
 </html>
