@@ -1,105 +1,178 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dota 2 Drafter</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            background-color: #121212;
-            color: #ffffff;
-            font-family: Arial, sans-serif;
-            padding: 15px;
-            margin: 0;
-        }
-        h2 {
-            text-align: center;
-            color: #e58e26;
-            margin-bottom: 20px;
-        }
-        .section {
-            background: #1e1e1e;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-        .section h3 {
-            margin-top: 0;
-            font-size: 16px;
-        }
-        .allies-title { color: #2ed573; }
-        .enemies-title { color: #ff4757; }
-        input {
-            width: 90%;
-            padding: 8px;
-            margin-bottom: 8px;
-            background: #2c2c2c;
-            border: 1px solid #444;
-            color: white;
-            border-radius: 4px;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            background: #e58e26;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dota 2 Drafter</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 15px;
+    }
+    h2, h3 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .selected-box {
+      background: #1e1e1e;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .hero-btn {
+      background: #2a2a2a;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 10px 5px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .hero-btn.selected-enemy {
+      background: #d9534f;
+      border-color: #ff0000;
+    }
+    .hero-btn.selected-ally {
+      background: #5cb85c;
+      border-color: #00ff00;
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: #f0ad4e;
+      border: none;
+      color: #000;
+      font-weight: bold;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-top: 15px;
+      cursor: pointer;
+    }
+    .mode-selector {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 10px;
+    }
+    .mode-btn {
+      padding: 8px 12px;
+      background: #333;
+      border: 1px solid #555;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .mode-btn.active {
+      background: #0275d8;
+      border-color: #0275d8;
+    }
+  </style>
 </head>
 <body>
-    <h2>Dota 2 Drafter</h2>
 
-    <div class="section">
-        <h3 class="allies-title">Союзники (4 героя)</h3>
-        <input type="text" id="ally1" placeholder="Союзник 1">
-        <input type="text" id="ally2" placeholder="Союзник 2">
-        <input type="text" id="ally3" placeholder="Союзник 3">
-        <input type="text" id="ally4" placeholder="Союзник 4">
-    </div>
+  <h2>Dota 2 Drafter</h2>
 
-    <div class="section">
-        <h3 class="enemies-title">Враги (4 героя)</h3>
-        <input type="text" id="enemy1" placeholder="Враг 1 (например, Invoker)">
-        <input type="text" id="enemy2" placeholder="Враг 2 (например, Axe)">
-        <input type="text" id="enemy3" placeholder="Враг 3 (например, Void)">
-        <input type="text" id="enemy4" placeholder="Враг 4">
-    </div>
+  <div class="selected-box">
+    <strong>Враги:</strong> <span id="enemies-list">Никого</span><br>
+    <strong>Союзники:</strong> <span id="allies-list">Никого</span>
+  </div>
 
-    <button onclick="sendData()">Рассчитать идеальный пик</button>
+  <div class="mode-selector">
+    <button class="mode-btn active" id="mode-enemy" onclick="setMode('enemy')">Выбирать Врага</button>
+    <button class="mode-btn" id="mode-ally" onclick="setMode('ally')">Выбирать Союзника</button>
+  </div>
 
-    <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand();
+  <h3>Кликни по герою:</h3>
+  <div class="hero-grid" id="heroes-container">
+    <!-- Кнопки героев сгенерируются скриптом -->
+  </div>
 
-        function sendData() {
-            let allies = [
-                document.getElementById('ally1').value,
-                document.getElementById('ally2').value,
-                document.getElementById('ally3').value,
-                document.getElementById('ally4').value
-            ].filter(Boolean);
+  <button class="btn-submit" onclick="sendData()">Рассчитать идеальный пик</button>
 
-            let enemies = [
-                document.getElementById('enemy1').value,
-                document.getElementById('enemy2').value,
-                document.getElementById('enemy3').value,
-                document.getElementById('enemy4').value
-            ].filter(Boolean);
+  <script>
+    let tg = window.Telegram.WebApp;
+    tg.expand();
 
-            let data = {
-                allies: allies,
-                enemies: enemies
-            };
+    // Первичный список популярных героев (легко расширим до всех)
+    const heroes = [
+      "Axe", "Invoker", "Sniper", "Pudge", "Juggernaut", 
+      "Phantom Assassin", "Slark", "Sven", "Lion", "Shadow Fiend",
+      "Anti-Mage", "Faceless Void", "Bristleback", "Drow Ranger", "Legion Commander"
+    ];
 
-            tg.sendData(JSON.stringify(data));
+    let selectedEnemies = [];
+    let selectedAllies = [];
+    let currentMode = 'enemy';
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('mode-enemy').classList.toggle('active', mode === 'enemy');
+      document.getElementById('mode-ally').classList.toggle('active', mode === 'ally');
+    }
+
+    function renderHeroes() {
+      const container = document.getElementById('heroes-container');
+      container.innerHTML = '';
+
+      heroes.forEach(hero => {
+        const btn = document.createElement('button');
+        btn.className = 'hero-btn';
+        btn.innerText = hero;
+
+        if (selectedEnemies.includes(hero)) btn.classList.add('selected-enemy');
+        if (selectedAllies.includes(hero)) btn.classList.add('selected-ally');
+
+        btn.onclick = () => toggleHero(hero);
+        container.appendChild(btn);
+      });
+    }
+
+    function toggleHero(hero) {
+      if (currentMode === 'enemy') {
+        if (selectedEnemies.includes(hero)) {
+          selectedEnemies = selectedEnemies.filter(h => h !== hero);
+        } else if (selectedEnemies.length < 5) {
+          selectedEnemies.push(hero);
+          selectedAllies = selectedAllies.filter(h => h !== hero);
         }
-    </script>
+      } else {
+        if (selectedAllies.includes(hero)) {
+          selectedAllies = selectedAllies.filter(h => h !== hero);
+        } else if (selectedAllies.length < 4) {
+          selectedAllies.push(hero);
+          selectedEnemies = selectedEnemies.filter(h => h !== hero);
+        }
+      }
+
+      document.getElementById('enemies-list').innerText = selectedEnemies.join(', ') || 'Никого';
+      document.getElementById('allies-list').innerText = selectedAllies.join(', ') || 'Никого';
+      renderHeroes();
+    }
+
+    function sendData() {
+      if (selectedEnemies.length === 0) {
+        alert('Выбери хотя бы одного врага!');
+        return;
+      }
+      let data = {
+        allies: selectedAllies,
+        enemies: selectedEnemies
+      };
+      tg.sendData(JSON.stringify(data));
+      tg.close();
+    }
+
+    renderHeroes();
+  </script>
 </body>
 </html>
