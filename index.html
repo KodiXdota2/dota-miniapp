@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dota 2 Drafter</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            padding: 15px;
+            margin: 0;
+        }
+        h2 {
+            text-align: center;
+            color: #e58e26;
+            margin-bottom: 20px;
+        }
+        .section {
+            background: #1e1e1e;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .section h3 {
+            margin-top: 0;
+            font-size: 16px;
+        }
+        .allies-title { color: #2ed573; }
+        .enemies-title { color: #ff4757; }
+        input {
+            width: 90%;
+            padding: 8px;
+            margin-bottom: 8px;
+            background: #2c2c2c;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #e58e26;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Dota 2 Drafter</h2>
+
+    <div class="section">
+        <h3 class="allies-title">Союзники (4 героя)</h3>
+        <input type="text" id="ally1" placeholder="Союзник 1">
+        <input type="text" id="ally2" placeholder="Союзник 2">
+        <input type="text" id="ally3" placeholder="Союзник 3">
+        <input type="text" id="ally4" placeholder="Союзник 4">
+    </div>
+
+    <div class="section">
+        <h3 class="enemies-title">Враги (4 героя)</h3>
+        <input type="text" id="enemy1" placeholder="Враг 1 (например, Invoker)">
+        <input type="text" id="enemy2" placeholder="Враг 2 (например, Axe)">
+        <input type="text" id="enemy3" placeholder="Враг 3 (например, Void)">
+        <input type="text" id="enemy4" placeholder="Враг 4">
+    </div>
+
+    <button onclick="sendData()">Рассчитать идеальный пик</button>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        function sendData() {
+            let allies = [
+                document.getElementById('ally1').value,
+                document.getElementById('ally2').value,
+                document.getElementById('ally3').value,
+                document.getElementById('ally4').value
+            ].filter(Boolean);
+
+            let enemies = [
+                document.getElementById('enemy1').value,
+                document.getElementById('enemy2').value,
+                document.getElementById('enemy3').value,
+                document.getElementById('enemy4').value
+            ].filter(Boolean);
+
+            let data = {
+                allies: allies,
+                enemies: enemies
+            };
+
+            tg.sendData(JSON.stringify(data));
+        }
+    </script>
+</body>
+</html>
