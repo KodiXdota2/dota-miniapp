@@ -6,151 +6,268 @@
   <title>Dota 2 Drafter</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body {
-      background-color: #121212;
-      color: #ffffff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 10px;
+    * {
       box-sizing: border-box;
+      user-select: none;
     }
-    .selected-box {
-      background: #1e1e1e;
-      padding: 8px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-      border: 1px solid #333;
-      font-size: 13px;
+    body {
+      background: #0f1115;
+      color: #e1e6eb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 12px;
     }
-    .mode-selector {
+
+    /* Верхний блок выбранных героев */
+    .draft-header {
+      background: #161920;
+      border: 1px solid #282c37;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .team-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .team-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      width: 75px;
+    }
+    .team-title.enemy { color: #ff5252; }
+    .team-title.ally { color: #4caf50; }
+    
+    .slots-container {
       display: flex;
       gap: 6px;
-      margin-bottom: 10px;
+      flex: 1;
+    }
+    .slot {
+      width: 36px;
+      height: 24px;
+      background: #202430;
+      border: 1px dashed #3a4050;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .slot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Переключатель режимов */
+    .mode-switch {
+      display: flex;
+      background: #161920;
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid #282c37;
+      margin-bottom: 12px;
     }
     .mode-btn {
       flex: 1;
       padding: 8px;
-      background: #2a2a2a;
-      border: 1px solid #444;
-      color: #fff;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
+      border: none;
+      background: transparent;
+      color: #7a8294;
+      font-weight: 600;
       font-size: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
     .mode-btn.active-enemy {
-      background: #8b0000;
-      border-color: #ff4d4d;
+      background: #2a1215;
+      color: #ff5252;
+      border: 1px solid #ff525244;
     }
     .mode-btn.active-ally {
-      background: #006400;
-      border-color: #5cd65c;
+      background: #122817;
+      color: #4caf50;
+      border: 1px solid #4caf5044;
     }
+
+    /* Сетка героев */
     .hero-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
+      gap: 8px;
       max-height: 220px;
       overflow-y: auto;
-      padding-right: 2px;
+      padding-right: 4px;
     }
+    .hero-grid::-webkit-scrollbar {
+      width: 4px;
+    }
+    .hero-grid::-webkit-scrollbar-thumb {
+      background: #282c37;
+      border-radius: 4px;
+    }
+
     .hero-card {
-      background: #222;
-      border: 2px solid #333;
+      position: relative;
+      background: #161920;
+      border: 2px solid #282c37;
       border-radius: 6px;
       overflow: hidden;
       cursor: pointer;
-      text-align: center;
+      transition: transform 0.1s, border-color 0.2s;
+      aspect-ratio: 16/9;
+    }
+    .hero-card:active {
+      transform: scale(0.96);
     }
     .hero-card img {
       width: 100%;
-      height: 40px;
+      height: 100%;
       object-fit: cover;
       display: block;
     }
     .hero-card .hero-name {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
       font-size: 9px;
-      padding: 2px;
-      background: rgba(0,0,0,0.85);
+      font-weight: 600;
+      padding: 2px 4px;
+      background: rgba(0, 0, 0, 0.75);
+      text-align: center;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .hero-card.selected-enemy {
-      border-color: #ff4d4d;
-      box-shadow: 0 0 5px #ff4d4d;
+      border-color: #ff5252;
+      box-shadow: 0 0 8px rgba(255, 82, 82, 0.4);
     }
     .hero-card.selected-ally {
-      border-color: #5cd65c;
-      box-shadow: 0 0 5px #5cd65c;
+      border-color: #4caf50;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
     }
-    .btn-submit {
+
+    /* Кнопка расчета */
+    .btn-calc {
       width: 100%;
-      padding: 10px;
-      background: #f0ad4e;
+      padding: 12px;
+      background: linear-gradient(135deg, #e5a93c, #c88318);
       border: none;
-      color: #000;
-      font-weight: bold;
-      border-radius: 6px;
-      font-size: 14px;
-      margin-top: 10px;
-      cursor: pointer;
-    }
-    .results-box {
+      color: #0f1115;
+      font-weight: 700;
+      border-radius: 8px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
       margin-top: 12px;
-      background: #1a1a1a;
-      border: 1px solid #00bc8c;
-      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(200, 131, 24, 0.25);
+    }
+
+    /* Блок результатов */
+    .results-box {
+      margin-top: 14px;
+      background: #161920;
+      border: 1px solid #282c37;
+      border-radius: 8px;
       padding: 10px;
       display: none;
     }
     .results-title {
-      color: #00bc8c;
-      font-weight: bold;
-      font-size: 13px;
-      margin-bottom: 8px;
+      color: #e5a93c;
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
       text-align: center;
     }
     .result-item {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #262626;
-      padding: 5px 8px;
-      border-radius: 4px;
-      margin-bottom: 4px;
-      font-size: 12px;
+      background: #202430;
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-bottom: 6px;
     }
-    .result-item img {
-      width: 30px;
-      height: 20px;
-      border-radius: 3px;
-      margin-right: 6px;
+    .result-item:last-child {
+      margin-bottom: 0;
     }
-    .result-hero-info {
+    .hero-info {
       display: flex;
       align-items: center;
+      gap: 8px;
+    }
+    .hero-info img {
+      width: 32px;
+      height: 20px;
+      border-radius: 3px;
+      object-fit: cover;
+    }
+    .hero-info span {
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .badge.positive {
+      background: rgba(76, 175, 80, 0.15);
+      color: #4caf50;
+    }
+    .badge.negative {
+      background: rgba(255, 82, 82, 0.15);
+      color: #ff5252;
     }
   </style>
 </head>
 <body>
 
-  <div class="selected-box">
-    <div><strong>Враги:</strong> <span id="enemies-list" style="color:#ff4d4d;">Никого</span></div>
-    <div><strong>Союзники:</strong> <span id="allies-list" style="color:#5cd65c;">Никого</span></div>
+  <!-- Блок выбранных слотов -->
+  <div class="draft-header">
+    <div class="team-row">
+      <span class="team-title enemy">Враги</span>
+      <div class="slots-container" id="enemy-slots">
+        <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+      </div>
+    </div>
+    <div class="team-row">
+      <span class="team-title ally">Союзники</span>
+      <div class="slots-container" id="ally-slots">
+        <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+      </div>
+    </div>
   </div>
 
-  <div class="mode-selector">
+  <!-- Переключатель -->
+  <div class="mode-switch">
     <button class="mode-btn active-enemy" id="mode-enemy" onclick="setMode('enemy')">Выбрать ВРАГА</button>
     <button class="mode-btn" id="mode-ally" onclick="setMode('ally')">Выбрать СОЮЗНИКА</button>
   </div>
 
+  <!-- Сетка героев -->
   <div class="hero-grid" id="heroes-container"></div>
 
-  <button class="btn-submit" onclick="calculatePicks()">Рассчитать идеальный пик</button>
+  <!-- Кнопка -->
+  <button class="btn-calc" onclick="calculatePicks()">Рассчитать контрпики</button>
 
+  <!-- Результаты -->
   <div class="results-box" id="results-box">
-    <div class="results-title">⚔️ ТОП КЕРРИ КОНТРПИКИ:</div>
+    <div class="results-title">⚔️ Лучшие Керри против пика</div>
     <div id="results-list"></div>
   </div>
 
@@ -158,13 +275,14 @@
     let tg = window.Telegram.WebApp;
     tg.expand();
 
+    // Список героев (код фантомки исправлен на phantom_assassin)
     const heroesList = [
       { name: "Axe", code: "axe", isCarry: false },
       { name: "Invoker", code: "invoker", isCarry: false },
       { name: "Sniper", code: "sniper", isCarry: true },
       { name: "Pudge", code: "pudge", isCarry: false },
       { name: "Juggernaut", code: "juggernaut", isCarry: true },
-      { name: "Phantom Assassin", code: "phantom_assassination", isCarry: true },
+      { name: "Phantom Assassin", code: "phantom_assassin", isCarry: true },
       { name: "Slark", code: "slark", isCarry: true },
       { name: "Sven", code: "sven", isCarry: true },
       { name: "Anti-Mage", code: "antimage", isCarry: true },
@@ -194,6 +312,28 @@
       document.getElementById('mode-ally').className = mode === 'ally' ? 'mode-btn active-ally' : 'mode-btn';
     }
 
+    function updateSlots() {
+      const enemySlots = document.querySelectorAll('#enemy-slots .slot');
+      enemySlots.forEach((slot, i) => {
+        if (selectedEnemies[i]) {
+          const hero = heroesList.find(h => h.name === selectedEnemies[i]);
+          slot.innerHTML = `<img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${hero.code}.png">`;
+        } else {
+          slot.innerHTML = '';
+        }
+      });
+
+      const allySlots = document.querySelectorAll('#ally-slots .slot');
+      allySlots.forEach((slot, i) => {
+        if (selectedAllies[i]) {
+          const hero = heroesList.find(h => h.name === selectedAllies[i]);
+          slot.innerHTML = `<img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${hero.code}.png">`;
+        } else {
+          slot.innerHTML = '';
+        }
+      });
+    }
+
     function renderHeroes() {
       const container = document.getElementById('heroes-container');
       container.innerHTML = '';
@@ -215,6 +355,8 @@
         card.onclick = () => toggleHero(hero.name);
         container.appendChild(card);
       });
+
+      updateSlots();
     }
 
     function toggleHero(heroName) {
@@ -234,14 +376,12 @@
         }
       }
 
-      document.getElementById('enemies-list').innerText = selectedEnemies.join(', ') || 'Никого';
-      document.getElementById('allies-list').innerText = selectedAllies.join(', ') || 'Никого';
       renderHeroes();
     }
 
     function calculatePicks() {
       if (selectedEnemies.length === 0) {
-        alert('Выбери хотя бы одного врага!');
+        alert('Выберите хотя бы одного вражеского героя!');
         return;
       }
 
@@ -268,8 +408,7 @@
 
         scores.push({
           hero: carry,
-          advantage: advantage,
-          winrate: avgWinrate
+          advantage: advantage
         });
       });
 
@@ -281,17 +420,17 @@
 
       scores.slice(0, 5).forEach((item, index) => {
         const sign = item.advantage >= 0 ? '+' : '';
-        const color = item.advantage >= 0 ? '#5cd65c' : '#ff4d4d';
+        const badgeClass = item.advantage >= 0 ? 'positive' : 'negative';
         const imgUrl = `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${item.hero.code}.png`;
 
         const row = document.createElement('div');
         row.className = 'result-item';
         row.innerHTML = `
-          <div class="result-hero-info">
+          <div class="hero-info">
             <img src="${imgUrl}">
-            <strong>${index + 1}. ${item.hero.name}</strong>
+            <span>${index + 1}. ${item.hero.name}</span>
           </div>
-          <span style="color: ${color}; font-weight: bold;">${sign}${item.advantage.toFixed(1)}%</span>
+          <span class="badge ${badgeClass}">${sign}${item.advantage.toFixed(1)}%</span>
         `;
         resultsList.appendChild(row);
       });
