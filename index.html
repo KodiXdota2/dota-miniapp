@@ -11,52 +11,51 @@
       color: #ffffff;
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 15px;
-    }
-    h2 {
-      text-align: center;
-      margin-top: 0;
-      margin-bottom: 10px;
+      padding: 10px;
+      box-sizing: border-box;
     }
     .selected-box {
       background: #1e1e1e;
-      padding: 10px;
-      border-radius: 8px;
-      margin-bottom: 15px;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 10px;
       border: 1px solid #333;
+      font-size: 13px;
     }
     .mode-selector {
       display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
+      gap: 6px;
+      margin-bottom: 10px;
     }
     .mode-btn {
       flex: 1;
-      padding: 10px;
+      padding: 6px;
       background: #2a2a2a;
       border: 1px solid #444;
       color: #fff;
-      border-radius: 6px;
+      border-radius: 5px;
       cursor: pointer;
       font-weight: bold;
+      font-size: 12px;
     }
     .mode-btn.active-enemy {
-      background: #a94442;
+      background: #8b0000;
       border-color: #ff4d4d;
     }
     .mode-btn.active-ally {
-      background: #3c763d;
+      background: #006400;
       border-color: #5cd65c;
     }
+    /* Делаем сетку 4 в ряд и компактные карточки */
     .hero-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
     }
     .hero-card {
       background: #222;
       border: 2px solid #333;
-      border-radius: 8px;
+      border-radius: 6px;
       overflow: hidden;
       cursor: pointer;
       text-align: center;
@@ -64,39 +63,41 @@
     }
     .hero-card img {
       width: 100%;
-      height: auto;
+      height: 42px;
+      object-fit: cover;
       display: block;
     }
     .hero-card .hero-name {
-      font-size: 11px;
-      padding: 4px 2px;
-      background: rgba(0,0,0,0.8);
+      font-size: 9px;
+      padding: 2px;
+      background: rgba(0,0,0,0.85);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .hero-card.selected-enemy {
       border-color: #ff4d4d;
-      box-shadow: 0 0 8px #ff4d4d;
+      box-shadow: 0 0 5px #ff4d4d;
     }
     .hero-card.selected-ally {
       border-color: #5cd65c;
-      box-shadow: 0 0 8px #5cd65c;
+      box-shadow: 0 0 5px #5cd65c;
     }
     .btn-submit {
       width: 100%;
-      padding: 14px;
+      padding: 10px;
       background: #f0ad4e;
       border: none;
       color: #000;
       font-weight: bold;
-      border-radius: 8px;
-      font-size: 16px;
-      margin-top: 15px;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-top: 10px;
       cursor: pointer;
     }
   </style>
 </head>
 <body>
-
-  <h2>Dota 2 Drafter</h2>
 
   <div class="selected-box">
     <div><strong>Враги:</strong> <span id="enemies-list" style="color:#ff4d4d;">Никого</span></div>
@@ -104,19 +105,18 @@
   </div>
 
   <div class="mode-selector">
-    <button class="mode-btn active-enemy" id="mode-enemy" onclick="setMode('enemy')">Выбирать ВРАГА</button>
-    <button class="mode-btn" id="mode-ally" onclick="setMode('ally')">Выбирать СОЮЗНИКА</button>
+    <button class="mode-btn active-enemy" id="mode-enemy" onclick="setMode('enemy')">Выбрать ВРАГА</button>
+    <button class="mode-btn" id="mode-ally" onclick="setMode('ally')">Выбрать СОЮЗНИКА</button>
   </div>
 
   <div class="hero-grid" id="heroes-container"></div>
 
-  <button class="btn-submit" onclick="sendData()">Рассчитать идеальный пик</button>
+  <button class="btn-submit" onclick="sendData()">Рассчитать пик</button>
 
   <script>
     let tg = window.Telegram.WebApp;
     tg.expand();
 
-    // Герои с их системными именами для аватарок Valve CDN
     const heroesList = [
       { name: "Axe", code: "axe" },
       { name: "Invoker", code: "invoker" },
@@ -138,16 +138,8 @@
 
     function setMode(mode) {
       currentMode = mode;
-      const enemyBtn = document.getElementById('mode-enemy');
-      const allyBtn = document.getElementById('mode-ally');
-
-      if (mode === 'enemy') {
-        enemyBtn.className = 'mode-btn active-enemy';
-        allyBtn.className = 'mode-btn';
-      } else {
-        enemyBtn.className = 'mode-btn';
-        allyBtn.className = 'mode-btn active-ally';
-      }
+      document.getElementById('mode-enemy').className = mode === 'enemy' ? 'mode-btn active-enemy' : 'mode-btn';
+      document.getElementById('mode-ally').className = mode === 'ally' ? 'mode-btn active-ally' : 'mode-btn';
     }
 
     function renderHeroes() {
@@ -161,11 +153,10 @@
         if (selectedEnemies.includes(hero.name)) card.classList.add('selected-enemy');
         if (selectedAllies.includes(hero.name)) card.classList.add('selected-ally');
 
-        // Ссылка на официальные картинки иконок Dota 2
         const imgUrl = `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${hero.code}.png`;
 
         card.innerHTML = `
-          <img src="${imgUrl}" alt="${hero.name}" onerror="this.src='https://via.placeholder.com/100x60?text=${hero.name}'">
+          <img src="${imgUrl}" alt="${hero.name}">
           <div class="hero-name">${hero.name}</div>
         `;
 
@@ -201,11 +192,7 @@
         alert('Выбери хотя бы одного врага!');
         return;
       }
-      let data = {
-        allies: selectedAllies,
-        enemies: selectedEnemies
-      };
-      tg.sendData(JSON.stringify(data));
+      tg.sendData(JSON.stringify({ allies: selectedAllies, enemies: selectedEnemies }));
       tg.close();
     }
 
