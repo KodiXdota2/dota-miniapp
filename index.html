@@ -96,7 +96,6 @@
       margin-top: 10px;
       cursor: pointer;
     }
-    /* Блок для результатов */
     .results-box {
       margin-top: 12px;
       background: #1a1a1a;
@@ -159,7 +158,6 @@
     let tg = window.Telegram.WebApp;
     tg.expand();
 
-    // База доступных героев
     const heroesList = [
       { name: "Axe", code: "axe", isCarry: false },
       { name: "Invoker", code: "invoker", isCarry: false },
@@ -175,7 +173,6 @@
       { name: "Drow Ranger", code: "drow_ranger", isCarry: true }
     ];
 
-    // Матрица контрпиков (Винрейт % Керри против других)
     const countersData = {
       "Juggernaut": { "Axe": 48.5, "Invoker": 54.2, "Pudge": 53.0, "Sniper": 51.5 },
       "Phantom Assassin": { "Axe": 45.0, "Invoker": 55.1, "Pudge": 52.4, "Sniper": 58.2 },
