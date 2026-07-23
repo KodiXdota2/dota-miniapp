@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DotaMETA</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #0d0a1a;
+      background: radial-gradient(circle at top, #1e1338 0%, #0d0a1a 100%);
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      padding: 12px;
+      padding-bottom: 80px;
+      min-height: 100vh;
+    }
+
+    /* Поиск */
+    .search-container {
+      position: relative;
+      margin-bottom: 15px;
+    }
+    .search-input {
+      width: 100%;
+      padding: 12px 16px 12px 40px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      backdrop-filter: blur(10px);
+    }
+    .search-input::placeholder {
+      color: #8b85a1;
+    }
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #8b85a1;
+      font-size: 14px;
+    }
+
+    /* Заголовки */
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Вкладка: Список Героев */
+    .heroes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .hero-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 10px 14px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: all 0.2s ease;
+    }
+    .hero-item:active {
+      transform: scale(0.98);
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .hero-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .hero-avatar {
+      width: 52px;
+      height: 32px;
+      border-radius: 8px;
+      object-fit: cover;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+    .hero-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .hero-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .hero-role {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .role-carry { color: #ffab00; }
+    .role-support { color: #00e676; }
+    .role-mid { color: #ff5252; }
+    .role-offlane { color: #29b6f6; }
+
+    .winrate-badge {
+      background: rgba(0, 230, 118, 0.12);
+      color: #00e676;
+      border: 1px solid rgba(0, 230, 118, 0.3);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* Вкладка: Драфт Помощник */
+    .draft-view {
+      display: none;
+    }
+    .mode-switch {
+      display: flex;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      color: #8b85a1;
+      font-weight: 700;
+      font-size: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .mode-btn.active-enemy {
+      background: rgba(255, 82, 82, 0.2);
+      color: #ff5252;
+      border: 1px solid #ff5252;
+    }
+    .mode-btn.active-ally {
+      background: rgba(0, 230, 118, 0.2);
+      color: #00e676;
+      border: 1px solid #00e676;
+    }
+    .grid-select {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .grid-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid transparent;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      cursor: pointer;
+      position: relative;
+    }
+    .grid-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .grid-card.sel-enemy { border-color: #ff5252; }
+    .grid-card.sel-ally { border-color: #00e676; }
+
+    /* Поп-ап Деталей Героя */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(5, 3, 12, 0.85);
+      backdrop-filter: blur(12px);
+      display: none;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 100;
+    }
+    .modal-content {
+      width: 100%;
+      max-height: 85vh;
+      background: #17122b;
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      overflow-y: auto;
+      animation: slideUp 0.25s cubic-bezier(0, 0, 0.2, 1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .close-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .info-block {
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .info-title {
+      font-size: 12px;
+      color: #8b85a1;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .items-list {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+    }
+    .item-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(0,0,0,0.3);
+      padding: 6px;
+      border-radius: 8px;
+      min-width: 65px;
+    }
+    .item-card img {
+      width: 40px;
+      height: 30px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+    }
+    .item-time {
+      font-size: 10px;
+      color: #ffab00;
+      font-weight: 700;
+    }
+
+    /* Нижняя панель навигации */
+    .bottom-nav {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      background: rgba(23, 18, 43, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 6px;
+      display: flex;
+      justify-content: space-around;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      z-index: 90;
+    }
+    .nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 0;
+      background: transparent;
+      border: none;
+      color: #8b85a1;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-btn.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .nav-icon {
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Поиск -->
+  <div class="search-container">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-input" id="search-input" placeholder="Поиск героя..." oninput="filterHeroes()">
+  </div>
+
+  <!-- Вкладка: Список Героев -->
+  <div id="tab-heroes">
+    <div class="section-title">👥 Все Герои</div>
+    <div class="heroes-list" id="heroes-list-container"></div>
+  </div>
+
+  <!-- Вкладка: Драфт -->
+  <div id="tab-draft" class="draft-view">
+    <div class="section-title">🪄 Помощник Драфта</div>
+    <div class="mode-switch">
+      <button class="mode-btn active-enemy" id="m-enemy" onclick="setDraftMode('enemy')">Выбрать ВРАГА</button>
+      <button class="mode-btn" id="m-ally" onclick="setDraftMode('ally')">Выбрать СОЮЗНИКА</button>
+    </div>
+    <div class="grid-select" id="draft-grid"></div>
+  </div>
+
+  <!-- Поп-ап окна Героя -->
+  <div class="modal-overlay" id="hero-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <img id="m-img" style="width:50px; height:32px; border-radius:6px;">
+          <div>
+            <h2 id="m-title" style="font-size:16px;">Wraith King</h2>
+            <span id="m-role" class="hero-role role-carry">CARRY</span>
+          </div>
+        </div>
+        <button class="close-btn" onclick="closeModal()">✕</button>
+      </div>
+
+      <div class="info-block">
+        <div class="info-title">📊 Винрейт мета-статистики</div>
+        <div id="m-winrate" style="font-size:20px; font-weight:800; color:#00e676;">54.7%</div>
+      </div>
+
+      <div class="info-block">
+        <div class="info-title">🛍️ Тайминги предметов (OpenDota / ProTracker)</div>
+        <div class="items-list" id="m-items"></div>
+      </div>
+
+      <div class="info-block">
+        <div class="info-title">🛡️ Топ-5 Лучших союзников</div>
+        <div id="m-allies" style="font-size:13px; line-height:1.6;"></div>
+      </div>
+
+      <div class="info-block">
+        <div class="info-title">⚔️ Топ-5 Контрпиков (Худшие враги)</div>
+        <div id="m-counters" style="font-size:13px; line-height:1.6;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Нижняя навигация -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="btn-tab-heroes" onclick="switchTab('heroes')">
+      <span class="nav-icon">👥</span>
+      ГЕРОИ
+    </button>
+    <button class="nav-btn" id="btn-tab-draft" onclick="switchTab('draft')">
+      <span class="nav-icon">🪄</span>
+      ПОМОШНИК ДРАФТА
+    </button>
+  </div>
+
+  <script>
+    let tg = window.Telegram.WebApp;
+    tg.expand();
+
+    // Расширенная мета-база героев
+    const heroesData = [
+      {
+        name: "Wraith King", code: "skeleton_king", role: "CARRY", roleClass: "role-carry", winrate: "54.7%",
+        items: [ {name: "Armlet", time: "11-13 мин", img: "armlet"}, {name: "Desolator", time: "18-20 мин", img: "desolator"}, {name: "BKB", time: "24-26 мин", img: "black_king_bar"} ],
+        allies: "1. Invoker | 2. Rubick | 3. Dazzle | 4. Lion | 5. Crystal Maiden",
+        counters: "1. Anti-Mage | 2. Phantom Lancer | 3. Slark | 4. Necrophos | 5. Razor"
+      },
+      {
+        name: "Spectre", code: "spectre", role: "CARRY", roleClass: "role-carry", winrate: "54.4%",
+        items: [ {name: "Blade Mail", time: "10-12 мин", img: "blade_mail"}, {name: "Radiance", time: "19-22 мин", img: "radiance"}, {name: "Aghanims", time: "27 мин", img: "ultimate_scepter"} ],
+        allies: "1. Zeus | 2. Nature's Prophet | 3. Warlock | 4. Silencer | 5. Treant",
+        counters: "1. Viper | 2. Necrophos | 3. Anti-Mage | 4. Undying | 5. Lifestealer"
+      },
+      {
+        name: "Vengeful Spirit", code: "vengefulspirit", role: "SUPPORT", roleClass: "role-support", winrate: "53.4%",
+        items: [ {name: "Tranquil", time: "6 мин", img: "tranquil_boots"}, {name: "Solar Crest", time: "14 мин", img: "solar_crest"}, {name: "Aghanims", time: "24 мин", img: "ultimate_scepter"} ],
+        allies: "1. Drow Ranger | 2. Luna | 3. Sven | 4. Slardar | 5. Weaver",
+        counters: "1. Rubick | 2. Tinker | 3. Phantom Lancer | 4. Broodmother | 5. Meepo"
+      },
+      {
+        name: "Snapfire", code: "snapfire", role: "MID LANE", roleClass: "role-mid", winrate: "53.1%",
+        items: [ {name: "Blink Dagger", time: "12 мин", img: "blink"}, {name: "Aghanims", time: "20 мин", img: "ultimate_scepter"}, {name: "Daedalus", time: "28 мин", img: "invis_sword"} ],
+        allies: "1. Faceless Void | 2. Mars | 3. Axe | 4. Tidehunter | 5. Magnus",
+        counters: "1. Chen | 2. Enigma | 3. Silencer | 4. Clockwerk | 5. Storm Spirit"
+      },
+      {
+        name: "Juggernaut", code: "juggernaut", role: "CARRY", roleClass: "role-carry", winrate: "52.8%",
+        items: [ {name: "Maelstrom", time: "11-13 мин", img: "maelstrom"}, {name: "Manta Style", time: "19-21 мин", img: "manta"}, {name: "Aghanims Shard", time: "15 мин", img: "point_booster"} ],
+        allies: "1. Crystal Maiden | 2. Shadow Shaman | 3. Lion | 4. Grimstroke | 5. Lich",
+        counters: "1. Axe | 2. Slardar | 3. Ursa | 4. Bane | 5. Windranger"
+      },
+      {
+        name: "Phantom Assassin", code: "phantom_assassin", role: "CARRY", roleClass: "role-carry", winrate: "51.9%",
+        items: [ {name: "BFury", time: "13-15 мин", img: "bfury"}, {name: "Desolator", time: "20-22 мин", img: "desolator"}, {name: "BKB", time: "25 мин", img: "black_king_bar"} ],
+        allies: "1. Magnus | 2. Ogre Magi | 3. Snapfire | 4. Chen | 5. Treant Protector",
+        counters: "1. Axe | 2. Razor | 3. Tinkers | 4. Morphling | 5. Bristleback"
+      }
+    ];
+
+    let draftEnemies = [];
+    let draftAllies = [];
+    let draftMode = 'enemy';
+
+    function renderHeroesList(list = heroesData) {
+      const container = document.getElementById('heroes-list-container');
+      container.innerHTML = '';
+
+      list.forEach(h => {
+        const item = document.createElement('div');
+        item.className = 'hero-item';
+        item.innerHTML = `
+          <div class="hero-left">
+            <img class="hero-avatar" src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${h.code}.png">
+            <div class="hero-meta">
+              <span class="hero-title">${h.name}</span>
+              <span class="hero-role ${h.roleClass}">➶ ${h.role}</span>
+            </div>
+          </div>
+          <div class="winrate-badge">${h.winrate}</div>
+        `;
+        item.onclick = () => openModal(h);
+        container.appendChild(item);
+      });
+    }
+
+    function openModal(hero) {
+      document.getElementById('m-title').innerText = hero.name;
+      document.getElementById('m-role').innerText = hero.role;
+      document.getElementById('m-role').className = `hero-role ${hero.roleClass}`;
+      document.getElementById('m-winrate').innerText = hero.winrate;
+      document.getElementById('m-img').src = `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${hero.code}.png`;
+      document.getElementById('m-allies').innerText = hero.allies;
+      document.getElementById('m-counters').innerText = hero.counters;
+
+      const itemsContainer = document.getElementById('m-items');
+      itemsContainer.innerHTML = '';
+      hero.items.forEach(it => {
+        itemsContainer.innerHTML += `
+          <div class="item-card">
+            <img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/${it.img}.png">
+            <span style="font-size:9px; font-weight:bold; color:#fff;">${it.name}</span>
+            <span class="item-time">⏱️ ${it.time}</span>
+          </div>
+        `;
+      });
+
+      document.getElementById('hero-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('hero-modal').style.display = 'none';
+    }
+
+    function filterHeroes() {
+      const q = document.getElementById('search-input').value.toLowerCase();
+      const filtered = heroesData.filter(h => h.name.toLowerCase().includes(q));
+      renderHeroesList(filtered);
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tab-heroes').style.display = tab === 'heroes' ? 'block' : 'none';
+      document.getElementById('tab-draft').style.display = tab === 'draft' ? 'block' : 'none';
+      document.getElementById('btn-tab-heroes').className = tab === 'heroes' ? 'nav-btn active' : 'nav-btn';
+      document.getElementById('btn-tab-draft').className = tab === 'draft' ? 'nav-btn active' : 'nav-btn';
+
+      if (tab === 'draft') renderDraftGrid();
+    }
+
+    function setDraftMode(m) {
+      draftMode = m;
+      document.getElementById('m-enemy').className = m === 'enemy' ? 'mode-btn active-enemy' : 'mode-btn';
+      document.getElementById('m-ally').className = m === 'ally' ? 'mode-btn active-ally' : 'mode-btn';
+    }
+
+    function renderDraftGrid() {
+      const container = document.getElementById('draft-grid');
+      container.innerHTML = '';
+      heroesData.forEach(h => {
+        const card = document.createElement('div');
+        card.className = 'grid-card';
+        if (draftEnemies.includes(h.name)) card.classList.add('sel-enemy');
+        if (draftAllies.includes(h.name)) card.classList.add('sel-ally');
+
+        card.innerHTML = `<img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${h.code}.png">`;
+        card.onclick = () => {
+          if (draftMode === 'enemy') {
+            draftEnemies.includes(h.name) ? draftEnemies = draftEnemies.filter(x => x !== h.name) : draftEnemies.push(h.name);
+          } else {
+            draftAllies.includes(h.name) ? draftAllies = draftAllies.filter(x => x !== h.name) : draftAllies.push(h.name);
+          }
+          renderDraftGrid();
+        };
+        container.appendChild(card);
+      });
+    }
+
+    renderHeroesList();
+  </script>
+</body>
+</html>
