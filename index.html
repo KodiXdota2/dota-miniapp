@@ -29,7 +29,7 @@
     }
     .mode-btn {
       flex: 1;
-      padding: 6px;
+      padding: 8px;
       background: #2a2a2a;
       border: 1px solid #444;
       color: #fff;
@@ -46,11 +46,13 @@
       background: #006400;
       border-color: #5cd65c;
     }
-    /* Делаем сетку 4 в ряд и компактные карточки */
     .hero-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 6px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 2px;
     }
     .hero-card {
       background: #222;
@@ -59,11 +61,10 @@
       overflow: hidden;
       cursor: pointer;
       text-align: center;
-      position: relative;
     }
     .hero-card img {
       width: 100%;
-      height: 42px;
+      height: 40px;
       object-fit: cover;
       display: block;
     }
@@ -95,6 +96,42 @@
       margin-top: 10px;
       cursor: pointer;
     }
+    /* Блок для результатов */
+    .results-box {
+      margin-top: 12px;
+      background: #1a1a1a;
+      border: 1px solid #00bc8c;
+      border-radius: 6px;
+      padding: 10px;
+      display: none;
+    }
+    .results-title {
+      color: #00bc8c;
+      font-weight: bold;
+      font-size: 13px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .result-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #262626;
+      padding: 5px 8px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    .result-item img {
+      width: 30px;
+      height: 20px;
+      border-radius: 3px;
+      margin-right: 6px;
+    }
+    .result-hero-info {
+      display: flex;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
@@ -111,26 +148,44 @@
 
   <div class="hero-grid" id="heroes-container"></div>
 
-  <button class="btn-submit" onclick="sendData()">Рассчитать пик</button>
+  <button class="btn-submit" onclick="calculatePicks()">Рассчитать идеальный пик</button>
+
+  <div class="results-box" id="results-box">
+    <div class="results-title">⚔️ ТОП КЕРРИ КОНТРПИКИ:</div>
+    <div id="results-list"></div>
+  </div>
 
   <script>
     let tg = window.Telegram.WebApp;
     tg.expand();
 
+    // База доступных героев
     const heroesList = [
-      { name: "Axe", code: "axe" },
-      { name: "Invoker", code: "invoker" },
-      { name: "Sniper", code: "sniper" },
-      { name: "Pudge", code: "pudge" },
-      { name: "Juggernaut", code: "juggernaut" },
-      { name: "Phantom Assassin", code: "phantom_assassination" },
-      { name: "Slark", code: "slark" },
-      { name: "Sven", code: "sven" },
-      { name: "Anti-Mage", code: "antimage" },
-      { name: "Faceless Void", code: "faceless_void" },
-      { name: "Bristleback", code: "bristleback" },
-      { name: "Drow Ranger", code: "drow_ranger" }
+      { name: "Axe", code: "axe", isCarry: false },
+      { name: "Invoker", code: "invoker", isCarry: false },
+      { name: "Sniper", code: "sniper", isCarry: true },
+      { name: "Pudge", code: "pudge", isCarry: false },
+      { name: "Juggernaut", code: "juggernaut", isCarry: true },
+      { name: "Phantom Assassin", code: "phantom_assassination", isCarry: true },
+      { name: "Slark", code: "slark", isCarry: true },
+      { name: "Sven", code: "sven", isCarry: true },
+      { name: "Anti-Mage", code: "antimage", isCarry: true },
+      { name: "Faceless Void", code: "faceless_void", isCarry: true },
+      { name: "Bristleback", code: "bristleback", isCarry: false },
+      { name: "Drow Ranger", code: "drow_ranger", isCarry: true }
     ];
+
+    // Матрица контрпиков (Винрейт % Керри против других)
+    const countersData = {
+      "Juggernaut": { "Axe": 48.5, "Invoker": 54.2, "Pudge": 53.0, "Sniper": 51.5 },
+      "Phantom Assassin": { "Axe": 45.0, "Invoker": 55.1, "Pudge": 52.4, "Sniper": 58.2 },
+      "Slark": { "Axe": 46.2, "Invoker": 53.8, "Pudge": 56.1, "Sniper": 54.0 },
+      "Sven": { "Axe": 51.0, "Invoker": 52.0, "Pudge": 54.5, "Sniper": 49.0 },
+      "Anti-Mage": { "Axe": 44.0, "Invoker": 61.5, "Pudge": 51.0, "Sniper": 53.2 },
+      "Faceless Void": { "Axe": 49.0, "Invoker": 52.5, "Pudge": 50.5, "Sniper": 55.0 },
+      "Drow Ranger": { "Axe": 43.5, "Invoker": 50.1, "Pudge": 48.0, "Sniper": 47.0 },
+      "Sniper": { "Axe": 52.0, "Invoker": 49.0, "Pudge": 47.5, "Sniper": 50.0 }
+    };
 
     let selectedEnemies = [];
     let selectedAllies = [];
@@ -187,13 +242,64 @@
       renderHeroes();
     }
 
-    function sendData() {
+    function calculatePicks() {
       if (selectedEnemies.length === 0) {
         alert('Выбери хотя бы одного врага!');
         return;
       }
-      tg.sendData(JSON.stringify({ allies: selectedAllies, enemies: selectedEnemies }));
-      tg.close();
+
+      let scores = [];
+
+      heroesList.filter(h => h.isCarry).forEach(carry => {
+        if (selectedEnemies.includes(carry.name) || selectedAllies.includes(carry.name)) return;
+
+        let totalWinrate = 0;
+        let count = 0;
+
+        selectedEnemies.forEach(enemy => {
+          if (countersData[carry.name] && countersData[carry.name][enemy]) {
+            totalWinrate += countersData[carry.name][enemy];
+            count++;
+          } else {
+            totalWinrate += 50.0;
+            count++;
+          }
+        });
+
+        let avgWinrate = count > 0 ? (totalWinrate / count) : 50.0;
+        let advantage = avgWinrate - 50.0;
+
+        scores.push({
+          hero: carry,
+          advantage: advantage,
+          winrate: avgWinrate
+        });
+      });
+
+      scores.sort((a, b) => b.advantage - a.advantage);
+
+      const resultsBox = document.getElementById('results-box');
+      const resultsList = document.getElementById('results-list');
+      resultsList.innerHTML = '';
+
+      scores.slice(0, 5).forEach((item, index) => {
+        const sign = item.advantage >= 0 ? '+' : '';
+        const color = item.advantage >= 0 ? '#5cd65c' : '#ff4d4d';
+        const imgUrl = `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${item.hero.code}.png`;
+
+        const row = document.createElement('div');
+        row.className = 'result-item';
+        row.innerHTML = `
+          <div class="result-hero-info">
+            <img src="${imgUrl}">
+            <strong>${index + 1}. ${item.hero.name}</strong>
+          </div>
+          <span style="color: ${color}; font-weight: bold;">${sign}${item.advantage.toFixed(1)}%</span>
+        `;
+        resultsList.appendChild(row);
+      });
+
+      resultsBox.style.display = 'block';
     }
 
     renderHeroes();
